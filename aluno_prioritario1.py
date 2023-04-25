@@ -3,9 +3,10 @@ import pandas as pd
 import dash
 from dash import dcc
 from dash import html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import plotly.express as px
 import joblib
+from plotly.offline import plot
 
 
 # Charger le modèle
@@ -39,10 +40,12 @@ app.layout = html.Div([
             style={"width": "50%"}
         ),
         html.Br(),
-        html.Label("Selecione um aluno: "),
-        
+        html.Label("Digite a nota final do aluno: "),
+        html.Br(),
+        dcc.Input(id='grade_input', type='number', min=0, max=20, step=1, style={"width": "50%"}),
         html.Br(),
         html.Label("Filtros: "),
+        html.Br(),
         dcc.Checklist(
             id='filtros',
             options=[
@@ -52,9 +55,47 @@ app.layout = html.Div([
                 {'label': 'Deseja continuar estudando', 'value': 'higher'},
                 {'label': 'Acesso à internet em casa', 'value': 'internet'}
             ],
+
             value=[]
         ),
         html.Br(),
+        html.Div([
+            html.H4('Consumo de álcool durante a semana'),
+            dcc.Slider(
+                id='dalc_slider',
+                min=1,
+                max=5,
+                marks={i: str(i) for i in range(1, 6)},
+                value=3,
+                className='custom-slider'
+            ),
+            html.H4('Consumo de álcool nos fins de semana'),
+            dcc.Slider(
+                id='walc_slider',
+                min=1,
+                max=5,
+                marks={i: str(i) for i in range(1, 6)},
+                value=3,
+                className='custom-slider'
+                
+            ),
+            html.H4('Estado de saúde atual'),
+            dcc.Slider(
+                id='health_slider',
+                min=1,
+                max=5,
+                marks={i: str(i) for i in range(1, 6)},
+                value=3,
+                className='custom-slider'
+                
+            ),
+            html.H4('Número de faltas na escola'),
+            dcc.Input(
+                id='absences_input',
+                type='number',
+                value=0
+            ),
+        ]),
         html.Label("Tempo de viagem de casa para a escola: "),
         dcc.RadioItems(
             id='tempo_viagem',
@@ -99,42 +140,83 @@ app.layout = html.Div([
     html.Div(
     children=[
         html.Iframe(
-            src="assets/my_plot.html",
+            src="assets/complexidade.html",
             style={'display': 'flex', 'flex-grow': '1', 'margin-left': '20%',"height": "850px", "width": "76%", 'margin-top': '5%', 'margin-right': '2%'},
         )
     ])
                     
 ])
 
+n_clicks = 0  # initialisation de la variable n_clicks
+
+# # Callback pour collecter les variables et créer le dataframe
 # @app.callback(
-#     Output('graphique', 'figure'),
-#     Input('dropdown-eleve', 'value'),
-#     Input('filtres', 'value'),
-#     Input('dropdown-ecole', 'value')
+#     Output('output-data', 'children'),
+#     Input('valider', 'n_clicks'),
+#     # State('grade_input', 'value'),
+#     State('dropdown-escola', 'value'),
+#     State('filtros', 'value'),
+#     State('tempo_viagem', 'value'),
+#     State('tempo_estudo', 'value'),
+#     State('reprovacoes_slider', 'value')
 # )
-# def update_figure(eleve, filtres, ecole):
-#     # Filtrer les données en fonction de l'école et de l'étudiant sélectionnés
-#     if eleve is not None:
-#         donnees_filtrees = donnees[(donnees["school"] == ecole) & (donnees["StudentID"] == eleve)]
-#     else:
-#         donnees_filtrees = donnees[donnees["school"] == ecole]
+# def collect_data(n_clicks, filtros, tempo_viagem, tempo_estudo, reprovacoes):
+#     data = {
+#         'internet': 1 if 'internet' in filtros else 0,
+#         'higher': 1 if 'higher' in filtros else 0,
+#         'traveltime': int(tempo_viagem),
+#         'studytime': int(tempo_estudo),
+#         'failures': int(reprovacoes),
+#         'Dalc': int(dalc),
+#         'Walc': int(walc),
+#         'health': int(health),
+#         'absences': int(absences)
+#         # 'FinalGrade': int(grade_input)
+#     }
+#     df = pd.DataFrame(data, index=[0])
+#     return df
 
-#     # Appliquer les filtres sélectionnés
-#     for filtre in filtres:
-#         donnees_filtrees = donnees_filtrees[donnees_filtrees[filtre] == 1]
+# # Appeler la fonction de collecte de données et stocker les résultats dans un DataFrame
+# df = collect_data(n_clicks, filtros, tempo_viagem, tempo_estudo, reprovacoes)
+# print(df)
 
-#     # Initialiser la liste des matières
-#     matieres = list(donnees_filtrees.columns[7:13])
 
-#     # Calculer la moyenne des notes des matières pour l'étudiant sélectionné
-#     moyennes_matieres = {}
-#     for matiere in matieres:
-#         moyenne_matiere = donnees_filtrees[matiere].mean()
-#         moyennes_matieres[matiere] = moyenne_matiere
 
-#     # Créer un graphique en barres avec les moyennes des notes des matières pour l'étudiant sélectionné
-#     fig = px.bar(x=list(moyennes_matieres.keys()), y=list(moyennes_matieres.values()), title="Moyennes des notes des matières")
-#     return fig
+# def calcul_complexite(df, studytime, failures, Walc, Dalc, internet, higher, absences):
+#     # Calcul de la nouvelle complexité
+#     new_complexity = studytime*(-0.5) + failures*(0.5) + failures*0.44 + Walc*(0.75) + Dalc*(0.78) + internet*(-0.56) + higher*(-0.6)
+    
+#     # Création de la nouvelle observation
+#     new_observation = pd.DataFrame({'studytime': [studytime],
+#                                     'failures': [failures],
+#                                     'Walc': [Walc],
+#                                     'Dalc': [Dalc],
+#                                     'internet': [internet],
+#                                     'higher': [higher],
+#                                     'absences': [absences],
+#                                     'Complexidade': [new_complexity]})
+    
+#     # Ajout de la nouvelle observation au dataframe
+#     df = df.append(new_observation, ignore_index=True)
+    
+#     # Création de la figure interactive avec la nouvelle observation
+#     fig = px.scatter(df, x='FinalGrade', y='Complexidade', color='school', hover_name='FamilyName', size='absences')
+#     fig.add_trace(px.scatter(new_observation, x='FinalGrade', y='Complexidade', color='red').data[0])
+    
+#     # Ajout du titre à la figure
+#     fig.update_layout(
+#         title={
+#             'text': "Priorização dos alunos a serem acompanhados com base na complexidade e valor do acompanhamento.",
+#             'y':0.95,
+#             'x':0.5,
+#             'xanchor': 'center',
+#             'yanchor': 'top'})
+    
+#     # Affichage de la figure
+#     plot(fig, filename='/assets/complexidade.html', auto_open=False)
+    
+#     # Retourne le dataframe avec la nouvelle observation ajoutée
+#     return df
 
 if __name__ == '__main__':
     app.run_server(debug=True) 
