@@ -31,10 +31,7 @@ ENV APP1_PORT=8050
 # Exposez les ports des deux applications
 EXPOSE $APP1_PORT
 
-#healthcheck
-HEALTHCHECK CMD curl --fail http://localhost:$APP1_PORT/_stcore/health 
-
 # Commande pour exécuter le script de démarrage
-CMD ["sh", "start.sh"]
+CMD ["python", "-m", "/app/app1/aluno_prioritario1.py", "--port" "$APP1_PORT"]
 
 HEALTHCHECK CMD curl --fail http://localhost:$APP1_PORT/_stcore/health 
